@@ -20,20 +20,35 @@ class GrepTools(object):
 
     def find_fragments(self, package_name, version_code, apk_dir):
         search_words = "'Landroid/app/Fragment\|Landroid/app/DialogFragment\|Landroid/app/ListFragment\|Landroid/app/PreferenceFragment\|Landroid/app/WebViewFragment'"
-
-        sub_process = Popen(
-            ['grep', '-nr', search_words, apk_dir], stdout=PIPE, stderr=PIPE)
-        out, err = sub_process.communicate()
-        found = 'False'
-        if out:
-            self.log.info(
-                "Fragment found for %s - %s: %s", package_name, version_code, out)
-            found = 'True'
-        if err:
+        source_dirs = self.get_source_directories(apk_dir)
+        if len(source_dirs) == 0:
             self.log.error(
-                "Error in Fragment search for package: %, version code %s. %s", 
-                package_name, version_code, err)
+                'No source code directories for package: %s , version code: %s', package_name, version_code)
+        found = False
+        for d in source_dirs:
+            sub_process = Popen(
+                ['grep', '-nr', search_words, d], stdout=PIPE, stderr=PIPE)
+            out, err = sub_process.communicate()
+            if out:
+                self.log.info(
+                    "Fragment found for %s - %s: %s", package_name, version_code, out)
+                found = True
+                # No need to search in other directories, so stop right here.
+                break
+            if err:
+                self.log.error(
+                    "Error in Fragment search for package: %, version code %s. %s",
+                    package_name, version_code, err)
         return found
+
+    # Return the source directories inside /smali/ excluding /smali/android
+    @staticmethod
+    def get_source_directories(apk_root_path):
+        dir_list = []
+        for d in [os.path.join(apk_root_path, f) for f in os.listdir(apk_root_path)]:
+            if os.path.isdir(d) and os.path.basename(d) != 'android':
+                dir_list.append(d)
+        return dir_list
 
     def start_main(self, command, source_dir, target_dir):
         result_file_name = os.path.join(
@@ -55,11 +70,12 @@ class GrepTools(object):
                         count += 1
                         self.log.info("%i Running grep on %s", count, apk_dir)
                         found = self.find_fragments(
-                        package_name, version_code, apk_dir)
+                            package_name, version_code, apk_dir)
                         result_file.write(
-                            package_name + ',' + version_code + ',' + found + '\n')
-                except IndexError as e:
-                    self.log.error('Directory must be named using the following scheme: packagename-versioncode')
+                            package_name + ',' + version_code + ',' + str(found) + '\n')
+                except IndexError:
+                    self.log.error(
+                        'Directory must be named using the following scheme: packagename-versioncode')
         result_file.close
 
     def main(self, args):
