@@ -6,22 +6,17 @@ import logging
 import xml.etree.ElementTree as ET
 from optparse import OptionParser
 from subprocess import Popen, PIPE
+from helpers.resources_listing import ResourcesListing
 
 
 class GrepTools(object):
     log = logging.getLogger("grep-tools")
     # The logger's level must be set to the "lowest" level.
     log.setLevel(logging.DEBUG)
-    # Flag that indicates the use of custom directory naming scheme. i.e.
-    # dir/c/com/a/amazon/com.amazon
-    use_custom_file_search = False
-
-    def __init__(self):
-        self.apk_files = []
 
     def find_fragment(self, package_name, version_code, apk_dir):
         search_words = r"Landroid/app/Fragment\|Landroid/app/DialogFragment\|Landroid/app/ListFragment\|Landroid/app/PreferenceFragment\|Landroid/app/WebViewFragment"
-        source_dirs = self.get_source_directories(apk_dir)
+        source_dirs = ResourcesListing.get_source_directories(apk_dir)
         if len(source_dirs) == 0:
             self.log.error(
                 'No source code directories for package: %s , version code: %s', package_name, version_code)
@@ -41,12 +36,12 @@ class GrepTools(object):
                     "Error in Fragment search for package: %s, version code %s. %s",
                     package_name, version_code, err)
         return found
-    
+
     # Returns the type of the webview the app uses (Android Webview, CordovaWebView,
     def find_webview(self, package_name, version_code, apk_dir):
         # 1 - search in the source code directories for the class 'android.webkit.WebView'
         search_words = r"Landroid/webkit/WebView\|Lorg/apache/cordova/CordovaWebView"
-        source_dirs = self.get_source_directories(apk_dir)
+        source_dirs = ResourcesListing.get_source_directories(apk_dir)
         if len(source_dirs) == 0:
             self.log.warn(
                 'No source code directories for package: %s , version code: %s', package_name, version_code)
@@ -68,57 +63,36 @@ class GrepTools(object):
                     "Error in WebView search for package: %s, version code %s. %s",
                     package_name, version_code, err)
         # 2 - If nothin is found in source files, search for a <WebView> element in the XML layout files
-        layout_files = self.get_layout_files(os.path.join(apk_dir, 'res'))
+        layout_files = ResourcesListing.get_layout_files(os.path.join(apk_dir, 'res'))
         for layout in layout_files:
-            webView_elements = self.find_element_in_xml_file(layout, 'WebView')
-            if webView_elements:
-                self.log.info('Found %i WebView elements in layout files.', len(webView_elements))
+            webview_elements = self.find_element_in_xml_file(layout, 'WebView')
+            if webview_elements:
+                self.log.info('Found %i WebView elements in layout files.', len(webview_elements))
                 return 'WebView'
             else:
-                cordovaWebView_elements = self.find_element_in_xml_file(layout, 'org.apache.cordova.CordovaWebView')
-                if cordovaWebView_elements:
+                cordova_webview_elements = self.find_element_in_xml_file(layout, 'org.apache.cordova.CordovaWebView')
+                if cordova_webview_elements:
                     return 'CordovaWebView'
         self.log.info("WebView is not found in package: %s, version code: %s", package_name, version_code)
         return None
-        
 
-    # Return the source directories inside /smali/ excluding /smali/android
-    @staticmethod
-    def get_source_directories(apk_root_path):
-        smali_path = os.path.join(apk_root_path, 'smali')
-        dir_list = []
-        for d in [os.path.join(smali_path, f) for f in os.listdir(smali_path)]:
-            if os.path.isdir(d) and os.path.basename(d) != 'android':
-                dir_list.append(d)
-        return dir_list
-        
-    # Return the layout files inside /res/layout*
-    @staticmethod
-    def get_layout_files(apk_res_path):
-        layout_files = []
-        for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
-            if os.path.isdir(d) and os.path.basename(d).lower().startswith('layout'):
-                for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
-                    if layout_file.lower().endswith('.xml'):
-                        layout_files.append(layout_file)
-        return layout_files
-        
     # Search for an element in an xml file.
-    @staticmethod    
+    @staticmethod
     def find_element_in_xml_file(xml_file, element_name):
         tree = ET.parse(xml_file)
         root = tree.getroot()
         return root.findall(element_name)
-        
-    def get_out_header(self, command):
+
+    @staticmethod
+    def get_out_header(command):
         if command == 'find_fragment':
             return 'Package Name,' + 'Version Code,' + "Fragment" + '\n'
         elif command == 'find_webview':
             return 'Package Name,' + 'Version Code,' + "WebView" + '\n'
-    
+
     def start_main(self, command, source_dir, target_dir):
         result_file_name = os.path.join(
-            target_dir,  command + ".csv")
+            target_dir, command + ".csv")
         result_file = open(result_file_name, 'w')
         header_info = self.get_out_header(command)
         result_file.write(header_info)
@@ -152,11 +126,10 @@ class GrepTools(object):
                             webview_type = webview
                         result_file.write(
                             package_name + ',' + version_code + ',' + str(found) + '\n')
-                        
+
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
-        result_file.close
 
     def main(self, args):
         start_time = datetime.datetime.now()
