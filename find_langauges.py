@@ -24,7 +24,7 @@ class FindLanguages(object):
         for res_val_dir in values_dirs:
             dir_name = os.path.basename(res_val_dir)
             if dir_name == 'values':
-                lang = 'English'
+                lang = 'Englishl'
                 if lang not in supported_languages:
                     supported_languages.append(lang)
                     continue
@@ -73,10 +73,12 @@ class FindLanguages(object):
                     languages = self.find_languages(
                         package_name, version_code, apk_dir)
                     languages_list = ""
-                    if len(languages) > 0:
+                    languages_count = 0
+                    if languages is not None and len(languages) > 0:
                         languages_list = '=='.join(map(str, languages))
+                        languages_count = len(languages)
                     result_file.write(
-                        package_name + ',' + version_code + ',' + str(len(languages)) + ',' + languages_list + '\n')
+                        package_name + ',' + version_code + ',' + str(languages_count) + ',' + languages_list + '\n')
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
