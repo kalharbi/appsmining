@@ -7,14 +7,16 @@ from optparse import OptionParser
 
 import pycountry
 from helpers.resources_listing import ResourcesListing
+from helpers.app_info import AppInfo
 
 
 class FindLanguages(object):
     log = logging.getLogger("grep-tools")
     # The logger's level must be set to the "lowest" level.
     log.setLevel(logging.DEBUG)
-
-    def find_languages(self, package_name, version_code, apk_dir):
+    
+    # Find supported languages by extracting the language ISO code from res/values* directories
+    def get_languages_from_values_dirs(self, package_name, version_code, apk_dir):
         values_dirs = ResourcesListing.get_values_directories(apk_dir)
         supported_languages = []
         if len(values_dirs) == 0:
@@ -41,7 +43,8 @@ class FindLanguages(object):
                                    res_val_dir, package_name, version_code)
                     continue
         return supported_languages
-
+    
+    # Returns the language name for the given ISO code.        
     def get_language_name(self, language_code):
         try:
             lang_unicode_name = pycountry.languages.get(alpha2=language_code).name
@@ -49,10 +52,10 @@ class FindLanguages(object):
         except (KeyError, UnicodeEncodeError):
             self.log.error('Unknown language code %s', language_code)
             return None
-
-    def start_main(self, source_dir, target_dir):
+    
+    def find_using_values_dirs(self, source_dir, target_dir):
         result_file_name = os.path.join(
-            target_dir, "languages.csv")
+            target_dir, "languages_using_values_dirs.csv")
         result_file = open(result_file_name, 'w')
         header_info = 'Package Name,' + 'Version Code,' + "No. of Supported Languages" + ',' + \
                       "Supported Languages" + '\n'
@@ -70,7 +73,7 @@ class FindLanguages(object):
                     version_code = os.path.basename(apk_dir).rsplit('-', 1)[1]
                     count += 1
                     self.log.info("%i Checking supported languages for %s", count, apk_dir)
-                    languages = self.find_languages(
+                    languages = self.get_languages_from_values_dirs(
                         package_name, version_code, apk_dir)
                     languages_list = ""
                     languages_count = 0
@@ -82,6 +85,43 @@ class FindLanguages(object):
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
+    
+    def find_using_aapt(self, apk_dirs, target_dir):
+        result_file_name = os.path.join(
+            target_dir, "languages_using_aapt.csv")
+        result_file = open(result_file_name, 'w')
+        header_info = 'Package Name,' + 'Version Code,' + "No. of Supported Languages" + ',' + \
+                      "Supported Languages" + '\n'
+        result_file.write(header_info)
+        count = 0
+        apk_files = []
+        for f in os.listdir(apk_dirs):
+            if f.lower().endswith('.apk'):
+                apk_files.append(os.path.abspath(os.path.join(apk_dirs, f)))
+        if apk_files is None or len(apk_files) == 0:
+            self.log.error('No apk files in %s', apk_dirs)
+            return
+        for apk_file in apk_files:
+            count += 1
+            self.log.info("%i Checking supported languages for %s", count, apk_file)
+            app_info_obj = AppInfo(apk_file)
+            languages = app_info_obj.get_languages_from_aapt()
+            package_name, version_code, version_name = app_info_obj.get_version_info()
+            languages_list = ""
+            languages_count = 0
+            if languages is not None and len(languages) > 0:
+                languages_list = ' '.join(map(str, languages))
+                languages_count = len(languages)
+            result_file.write(
+                package_name + ',' + version_code + ',' + str(languages_count) + ',' + languages_list + '\n')
+        
+    def start_main(self, command, source_dir, target_dir):
+        if command == 'find_languages_using_aapt':
+            self.find_using_aapt(source_dir, target_dir)
+        elif command == 'find_languages_using_values_dirs':
+            self.find_using_values_dirs(source_dir, target_dir)
+        else:
+            self.log.error('Unknown command.')
 
     def main(self, args):
         start_time = datetime.datetime.now()
@@ -98,9 +138,23 @@ class FindLanguages(object):
         # Add the console logger
         self.log.addHandler(logging_console)
 
-        usage_info = ''' python %prog <unpacked_apk_source_directory> <target_directory> [options]
+        usage_info = ''' python %prog <COMMAND> <source_directory> <target_directory> [options]
         
-        Find supported langauges in Android apps and save the results into a .csv file at the given target_directory.'''
+        DESCRIPTION:
+        
+        Check Apps for Supporting Multiple Languages.
+        
+        Find supported langauges in Android apps and save the results into a
+        .csv file at the given target_directory. Languages can be found by
+        either running aapt or reading res/values directories that are
+        named with an additional hyphen and the ISO language code at the
+        end of the values directory name.
+        
+        The following commands are available:
+        
+        find_languages_using_aapt <directory_of_apk_files>
+        find_languages_using_values_dirs <directory_of_unpacked_apk_files>
+        '''
         # command line parser
         parser = OptionParser(usage=usage_info, version="%prog 1.0")
         parser.add_option("-l", "--log", dest="log_file",
@@ -109,7 +163,7 @@ class FindLanguages(object):
                           action='count', help='increase verbosity.')
 
         (options, args) = parser.parse_args()
-        if len(args) != 2:
+        if len(args) != 3:
             parser.error("incorrect number of arguments.")
         if options.log_file:
             logging_file = logging.FileHandler(options.log_file, mode='a',
@@ -124,20 +178,28 @@ class FindLanguages(object):
             # set the file logger level if it exists
             if logging_file:
                 logging_file.setLevel(logging_level)
-
+                
+        # Check command name
+        command = None
+        if args[0] == 'find_languages_using_aapt':
+            command = 'find_languages_using_aapt'
+        elif args[0] == 'find_languages_using_values_dirs':
+            command = 'find_languages_using_values_dirs'
+        else:
+            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [find_languages_using_aapt, find_languages_using_values_dirs]")
         # Check target directory
         source_dir = None
         target_dir = None
-        if os.path.isdir(args[0]):
-            source_dir = os.path.abspath(args[0])
-        else:
-            sys.exit("Error: source directory " + args[0] + " does not exist.")
-
         if os.path.isdir(args[1]):
-            target_dir = os.path.abspath(args[1])
+            source_dir = os.path.abspath(args[1])
         else:
-            sys.exit("Error: target directory " + args[1] + " does not exist.")
-        self.start_main(source_dir, target_dir)
+            sys.exit("Error: source directory " + args[1] + " does not exist.")
+
+        if os.path.isdir(args[2]):
+            target_dir = os.path.abspath(args[2])
+        else:
+            sys.exit("Error: target directory " + args[2] + " does not exist.")
+        self.start_main(command, source_dir, target_dir)
 
         print("======================================================")
         print("Finished after " + str(datetime.datetime.now() - start_time))
