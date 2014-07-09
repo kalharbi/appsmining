@@ -63,7 +63,7 @@ class GrepTools(object):
                     "Error in WebView search for package: %s, version code %s. %s",
                     package_name, version_code, err)
         # 2 - If nothin is found in source files, search for a <WebView> element in the XML layout files
-        layout_files = ResourcesListing.get_layout_files(os.path.join(apk_dir, 'res'))
+        layout_files = ResourcesListing.get_all_layout_files(apk_dir)
         for layout in layout_files:
             webview_elements = self.find_element_in_xml_file(layout, 'WebView')
             if webview_elements:
