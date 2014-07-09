@@ -185,7 +185,7 @@ class FindLanguages(object):
         elif args[0] == 'find_languages':
             command = 'find_languages'
         else:
-            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [find_languages_using_aapt, find_languages_using_values_dirs]")
+            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [find_languages, find_locales]")
         # Check target directory
         source_dir = None
         target_dir = None
