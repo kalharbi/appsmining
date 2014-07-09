@@ -140,23 +140,22 @@ class FindLanguages(object):
 
         usage_info = ''' python %prog <COMMAND> <source_directory> <target_directory> [options]
         
-        DESCRIPTION:
-        
-        Check Apps for Supporting Multiple Languages.
-        
-        Find supported langauges in Android apps and save the results into a
-        .csv file at the given target_directory. Languages can be found by
-        either running aapt or reading res/values directories that are
-        named with an additional hyphen and the ISO language code at the
-        end of the values directory name.
-        
         The following commands are available:
         
         find_languages_using_aapt <directory_of_apk_files>
         find_languages_using_values_dirs <directory_of_unpacked_apk_files>
         '''
+        description_paragraph = ("DESCRIPTION: Find supported languages in"
+                   " apps and save the results into a .csv file at the given"
+                   " target_directory. Languages can be found by either"
+                   " running aapt or reading res/values directories that are"
+                   " named with an additional hyphen and the ISO language"
+                   " code at the end of the values directory name.")
+        
         # command line parser
-        parser = OptionParser(usage=usage_info, version="%prog 1.0")
+        parser = OptionParser(
+            usage=usage_info, description = description_paragraph,
+            version="%prog 1.0")
         parser.add_option("-l", "--log", dest="log_file",
                           help="write logs to FILE.", metavar="FILE")
         parser.add_option('-v', '--verbose', dest="verbose", default=0,
