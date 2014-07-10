@@ -11,7 +11,7 @@ from helpers.app_info import AppInfo
 
 
 class FindLanguages(object):
-    log = logging.getLogger("grep-tools")
+    log = logging.getLogger("find_languages")
     # The logger's level must be set to the "lowest" level.
     log.setLevel(logging.DEBUG)
     
