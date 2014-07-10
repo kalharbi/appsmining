@@ -32,7 +32,6 @@ class AppInfo(object):
                             version_name = field.split('versionName=',1)[1].replace("'", "")
                 break
         return package_name, version_code, version_name
-        
     
     # Find supported languages by running aapt.  
     def get_languages_from_aapt(self):
@@ -43,5 +42,44 @@ class AppInfo(object):
                     languages_arr = line.split(' ',1)[1].split(' ')
                     break
         return languages_arr
-        
-        
+    
+    # Find supported screen sizes
+    def get_screen_sizes(self):
+        small = normal = large = xlarge = False
+        if self.aapt_out:
+            for line in self.aapt_out.split('\n'):
+                if line.startswith('supports-screens:'):
+                    fields = line.replace("'", "").split(' ',1)[1].split(' ')
+                    for field in fields:
+                        if field == 'small':
+                            small = True
+                        elif field == 'normal':
+                            normal = True
+                        elif field == 'large':
+                            large = True
+                        elif field == 'xlarge':
+                            xlarge = True
+        return small, normal, large, xlarge
+    
+    # Find supported screen densities    
+    def get_screen_densities(self):
+        densities = []
+        if self.aapt_out:
+            for line in self.aapt_out.split('\n'):
+                if line.startswith('densities:'):
+                    fields = line.replace("'", "").split(' ',1)[1].split(' ')
+                    for field in fields:
+                        densities.append(field)
+        return densities
+    
+    # Returns a list of used native code
+    def get_native_code(self):
+        native_code =[]
+        dnative = []
+        if self.aapt_out:
+            for line in self.aapt_out.split('\n'):
+                if line.startswith('native-code:'):
+                    fields = line.replace("'", "").split(' ',1)[1].split(' ')
+                    for field in fields:
+                        native_code.append(field)
+        return native_code
