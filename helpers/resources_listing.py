@@ -23,12 +23,38 @@ class ResourcesListing(object):
                 dir_list.append(d)
         return dir_list
 
-    # Return the layout files inside /res/layout*
+    # Return all the layout files inside /res/layout*
     @staticmethod
-    def get_layout_files(apk_res_path):
+    def get_all_layout_files(apk_root_path):
+        apk_res_path = os.path.join(apk_root_path, 'res')
         layout_files = []
         for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
             if os.path.isdir(d) and os.path.basename(d).lower().startswith('layout'):
+                for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
+                    if layout_file.lower().endswith('.xml'):
+                        layout_files.append(layout_file)
+        return layout_files
+    
+    # Return all the layout files inside /res/layout for normal screen size (default)
+    @staticmethod
+    def get_default_layout_files(apk_root_path):
+        apk_res_path = os.path.join(apk_root_path, 'res')
+        layout_files = []
+        for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
+            if os.path.isdir(d) and os.path.basename(d) == 'layout':
+                for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
+                    if layout_file.lower().endswith('.xml'):
+                        layout_files.append(layout_file)
+        return layout_files
+        
+    # Return all the specific layout files inside /res/layout-* for specific screen size
+    # Or for specific layout direction (e.g, /res/layout-ldrtl for "right-to-left" language)
+    @staticmethod
+    def get_specific_layout_files(apk_root_path):
+        apk_res_path = os.path.join(apk_root_path, 'res')
+        layout_files = []
+        for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
+            if os.path.isdir(d) and os.path.basename(d).startswith('layout-'):
                 for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
                     if layout_file.lower().endswith('.xml'):
                         layout_files.append(layout_file)
