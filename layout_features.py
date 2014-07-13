@@ -71,9 +71,9 @@ class LayoutFeatures(object):
                     image_buttons_count = 0
                     for layout_file in layout_files:
                         elements = self.find_xml_elements_by_name(layout_file, 'ImageButton')
-                        elements_count += len(elements)
+                        image_buttons_count += len(elements)
                     result_file.write(
-                        package_name + ',' + version_code + ',' + str(elements_count) + '\n')
+                        package_name + ',' + version_code + ',' + str(image_buttons_count) + '\n')
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
