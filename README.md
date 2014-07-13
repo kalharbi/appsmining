@@ -14,7 +14,7 @@ Usage:  python grep_tools.py COMMAND <unpacked_apk_source_directory> <target_dir
 		find_webview
         
 
-Options:  --version            show program's version number and exit
+Options:  --version    show program's version number and exit
   -h, --help           show this help message and exit
   -l FILE, --log=FILE  write logs to FILE.
   -v, --verbose        increase verbosity.
@@ -78,6 +78,31 @@ Usage:  python screen_support.py <COMMAND> <source_directory> <target_directory>
 
 DESCRIPTION: Find the number of supported screen sizes and densities of apps
 and save the results into a .csv file at the given target_directory. Screensizes and densities info are obtained from the output of aapt tool.
+
+Options:
+  --version            show program's version number and exit
+  -h, --help           show this help message and exit
+  -l FILE, --log=FILE  write logs to FILE.
+  -v, --verbose        increase verbosity.
+```
+
+## layout_features.py
+
+This tool finds features (elements and attributes) in layout files.
+
+```
+Usage:  python layout_features.py <COMMAND> <source_directory> <target_directory> [options]
+        
+        The following commands are available:
+        
+        on_click <directory_of_unpacked_apk_files>
+        image_button <directory_of_unpacked_apk_files>
+        
+
+DESCRIPTION: Find features in layout files. Features include xml elements and
+attributes. These features are extracted from res/layout*/*.xml files, which
+are the layouts for normal and specific screen sizes. The results are saved in
+a .csv file at the given target_directory.
 
 Options:
   --version            show program's version number and exit
