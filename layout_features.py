@@ -36,10 +36,11 @@ class LayoutFeatures(object):
                     count += 1
                     self.log.info("%i - Checking the number of elements with android:onClick attribute for %s", count, apk_dir)
                     layout_files = ResourcesListing.get_all_layout_files(apk_dir)
+                    print("Number of layout files: " + str(len(layout_files)))
                     elements_count = 0
                     for layout_file in layout_files:
                         elements = self.find_xml_elements_by_attribute(layout_file, 'onClick')
-                        elements_count = len(elements)
+                        elements_count += len(elements)
                     result_file.write(
                         package_name + ',' + version_code + ',' + str(elements_count) + '\n')
                 except IndexError:
@@ -70,7 +71,7 @@ class LayoutFeatures(object):
                     image_buttons_count = 0
                     for layout_file in layout_files:
                         elements = self.find_xml_elements_by_name(layout_file, 'ImageButton')
-                        elements_count = len(elements)
+                        elements_count += len(elements)
                     result_file.write(
                         package_name + ',' + version_code + ',' + str(elements_count) + '\n')
                 except IndexError:
