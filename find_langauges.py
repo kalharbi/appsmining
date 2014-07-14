@@ -26,7 +26,7 @@ class FindLanguages(object):
         for res_val_dir in values_dirs:
             dir_name = os.path.basename(res_val_dir)
             if dir_name == 'values':
-                lang = 'Englishl'
+                lang = 'English'
                 if lang not in supported_languages:
                     supported_languages.append(lang)
                     continue
@@ -75,11 +75,12 @@ class FindLanguages(object):
                     self.log.info("%i Checking supported languages for %s", count, apk_dir)
                     languages = self.get_languages(
                         package_name, version_code, apk_dir)
-                    languages_list = ""
+                    languages_list = "["
                     languages_count = 0
                     if languages is not None and len(languages) > 0:
-                        languages_list = '=='.join(map(str, languages))
+                        languages_list = '|'.join(map(str, languages))
                         languages_count = len(languages)
+                    languages_list += "]"
                     result_file.write(
                         package_name + ',' + version_code + ',' + str(languages_count) + ',' + languages_list + '\n')
                 except IndexError:
