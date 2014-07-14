@@ -48,6 +48,8 @@ class FindLanguages(object):
     def get_language_name(self, language_code):
         try:
             lang_unicode_name = pycountry.languages.get(alpha2=language_code).name
+            if ',' in lang_unicode_name:
+                lang_unicode_name = lang_unicode_name.replace(',', '-')
             return lang_unicode_name.encode('ascii','ignore')
         except (KeyError, UnicodeEncodeError):
             self.log.error('Unknown language code %s', language_code)
