@@ -39,7 +39,7 @@ class AppInfo(object):
         if self.aapt_out:
             for line in self.aapt_out.split('\n'):
                 if line.startswith('locales:'):
-                    languages_arr = line.split(' ',1)[1].split(' ')
+                    languages_arr = line.replace("'",'').split(' ',1)[1].split(' ')
                     break
         return languages_arr
     
