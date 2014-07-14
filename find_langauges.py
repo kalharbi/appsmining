@@ -111,7 +111,7 @@ class FindLanguages(object):
             languages_list = ""
             languages_count = 0
             if languages is not None and len(languages) > 0:
-                languages_list = ' '.join(map(str, languages))
+                languages_list = '|'.join(map(str, languages))
                 languages_count = len(languages)
             result_file.write(
                 package_name + ',' + version_code + ',' + str(languages_count) + ',' + languages_list + '\n')
