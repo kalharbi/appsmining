@@ -21,13 +21,16 @@
 
 * * *
 ## Data
-<table border=0 cellpadding=0 cellspacing=0 width=455 style='border-collapse:
- collapse;table-layout:fixed;width:455pt'>
- <col width=65 span=7 style='width:65pt'>
+<table border=0 cellpadding=0 cellspacing=0 width=729 style='border-collapse:
+ collapse;table-layout:fixed;width:729pt'>
+ <col width=290 style='mso-width-source:userset;mso-width-alt:12373;width:290pt'>
+ <col width=96 style='mso-width-source:userset;mso-width-alt:4096;width:96pt'>
+ <col width=83 style='mso-width-source:userset;mso-width-alt:3541;width:83pt'>
+ <col width=65 span=4 style='width:65pt'>
  <tr height=12 style='height:12.0pt'>
-  <td height=12 width=65 style='height:12.0pt;width:65pt'></td>
-  <td width=65 style='width:65pt'></td>
-  <td class=xl60 width=65 style='width:65pt'>total_screens</td>
+  <td height=12 width=290 style='height:12.0pt;width:290pt'></td>
+  <td width=96 style='width:96pt'></td>
+  <td class=xl60 width=83 style='width:83pt'>total_screens</td>
   <td class=xl60 width=65 style='border-left:none;width:65pt'>small</td>
   <td class=xl60 width=65 style='border-left:none;width:65pt'>normal</td>
   <td class=xl60 width=65 style='border-left:none;width:65pt'>large</td>
