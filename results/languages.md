@@ -10,6 +10,9 @@
 | Mean       |        4.09             |
 
 * * *
+![Histogram of supported language](./images/language_summary.png)
+
+* * *
 ![Histogram of changes in supported language](./images/lang_changes.png)
 
 * * *
