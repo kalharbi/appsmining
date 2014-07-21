@@ -53,7 +53,7 @@ class ScreenSupport(object):
         result_file = open(result_file_name, 'w')
         header_info = 'Package Name,' + 'Version Code,' + \
                "Number of Supported Screen Sizes," + \
-               "normal,normal,large,xlarge" + '\n'
+               "small,normal,large,xlarge" + '\n'
         result_file.write(header_info)
         count = 0
         apk_files = []
