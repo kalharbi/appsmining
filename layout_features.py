@@ -78,7 +78,39 @@ class LayoutFeatures(object):
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
         
-    
+    def find_custom_widgets(self, source_dir, target_dir):
+        result_file_name = os.path.join(
+            target_dir, "custom_widgets.csv")
+        result_file = open(result_file_name, 'w')
+        header_info = 'Package Name,' + 'Version Code,' + \
+               "Number of custom widgets" + '\n'
+        result_file.write(header_info)
+        count = 0
+        # Iterate over the unpacked apk files in the source directory.
+        for apk_dir in [os.path.join(source_dir, f) for f in os.listdir(source_dir)]:
+            # check if the directory is for an unpacked apk. i.e, contains
+            # AndroidManifest.xml
+            manifest_file = os.path.abspath(
+                os.path.join(apk_dir, 'AndroidManifest.xml'))
+            if os.path.isdir(apk_dir) and os.path.isfile(manifest_file):
+                try:
+                    package_name = os.path.basename(apk_dir).rsplit('-', 1)[0]
+                    version_code = os.path.basename(apk_dir).rsplit('-', 1)[1]
+                    count += 1
+                    self.log.info("%i - Checking the number of custom widget elements for %s", count, apk_dir)
+                    layout_files = ResourcesListing.get_all_layout_files(apk_dir)
+                    custom_widgets_count = 0
+                    for layout_file in layout_files:
+                        elements = self.find_xml_elements_start_with_name(layout_file, package_name.split('.')[0])
+                        #for e in elements:
+                            #print(e.tag)
+                        custom_widgets_count += len(elements)
+                    result_file.write(
+                        package_name + ',' + version_code + ',' + str(custom_widgets_count) + '\n')
+                except IndexError:
+                    self.log.error(
+                        'Directory must be named using the following scheme: packagename-versioncode')
+                        
     # Search for an element in an xml file.
     @staticmethod
     def find_xml_elements_by_name(xml_file, element_name):
@@ -99,12 +131,21 @@ class LayoutFeatures(object):
             if element.get(attribute_full_name):
                 elements_list.append(element.tag)
         return elements_list
+    
+    @staticmethod
+    def find_xml_elements_start_with_name(xml_file, start_name):
+        from lxml import etree
+        tree = etree.parse(xml_file)
+        xpath_query = "//*[starts-with(name(), '" + start_name + "')]"
+        return tree.xpath(xpath_query)
         
     def start_main(self, command, source_dir, target_dir):
         if command == 'on_click':
             self.find_on_click(source_dir, target_dir)
         elif command == 'image_button':
             self.find_image_button(source_dir, target_dir)
+        elif command == 'custom_widgets':
+            self.find_custom_widgets(source_dir, target_dir)
         else:
             self.log.error('Unknown command.')
 
@@ -129,6 +170,7 @@ class LayoutFeatures(object):
         
         on_click <directory_of_unpacked_apk_files>
         image_button <directory_of_unpacked_apk_files>
+        custom_widgets <directory_of_unpacked_apk_files>
         '''
         description_paragraph = ("DESCRIPTION: Find features in layout files."
                    " Features include xml elements and attributes."
@@ -168,8 +210,10 @@ class LayoutFeatures(object):
             command = 'on_click'
         elif args[0] == 'image_button':
             command = 'image_button'
+        elif args[0] == 'custom_widgets':
+            command = 'custom_widgets'
         else:
-            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [on_click, image_button]")
+            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [on_click, image_button, custom_widgets]")
         # Check target directory
         source_dir = None
         target_dir = None
