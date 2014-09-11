@@ -154,9 +154,13 @@ class LayoutFeatures(object):
     
     @staticmethod
     def find_xml_elements_start_with_name(xml_file, start_name):
-        tree = etree.parse(xml_file)
-        xpath_query = "//*[starts-with(name(), '" + start_name + "')]"
-        return tree.xpath(xpath_query)
+        try:
+            tree = etree.parse(xml_file)
+            xpath_query = "//*[starts-with(name(), '" + start_name + "')]"
+            return tree.xpath(xpath_query)
+        except (ParserError, XMLSyntaxError) as e:
+            print("Error in file: %s",xml_file)
+        return []
         
     def start_main(self, command, source_dir, target_dir):
         if command == 'on_click':
