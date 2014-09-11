@@ -76,6 +76,30 @@ class GrepTools(object):
         self.log.info("WebView is not found in package: %s, version code: %s", package_name, version_code)
         return None
 
+
+    def find_up_navigation(self, package_name, version_code, apk_dir):
+        search_words = r"Landroid/app/ActionBar;->setDisplayHomeAsUpEnabled(Z)V"
+        source_dirs = ResourcesListing.get_source_directories(apk_dir)
+        if len(source_dirs) == 0:
+            self.log.error(
+                'No source code directories for package: %s , version code: %s', package_name, version_code)
+        found = False
+        for d in source_dirs:
+            sub_process = Popen(
+                ['grep', '-r', search_words, d], stdout=PIPE, stderr=PIPE)
+            out, err = sub_process.communicate()
+            if out:
+                self.log.info(
+                    "Up Navigaation found for %s - %s.", package_name, version_code)
+                found = True
+                # No need to search in other directories, so stop right here.
+                break
+            if err:
+                self.log.error(
+                    "Error in Up Navigaation search for package: %s, version code %s. %s",
+                    package_name, version_code, err)
+        return found
+        
     # Search for an element in an xml file.
     @staticmethod
     def find_element_in_xml_file(xml_file, element_name):
@@ -86,9 +110,11 @@ class GrepTools(object):
     @staticmethod
     def get_out_header(command):
         if command == 'find_fragment':
-            return 'Package Name,' + 'Version Code,' + "Fragment" + '\n'
+            return 'package,' + 'version_code,' + "Fragment" + '\n'
         elif command == 'find_webview':
-            return 'Package Name,' + 'Version Code,' + "WebView" + '\n'
+            return 'package,' + 'version_code,' + "WebView" + '\n'
+        elif command == 'find_up_navigation':
+            return 'package,' + 'version_code,' + "UpNavigation" + '\n'
 
     def start_main(self, command, source_dir, target_dir):
         result_file_name = os.path.join(
@@ -126,6 +152,13 @@ class GrepTools(object):
                             webview_type = webview
                         result_file.write(
                             package_name + ',' + version_code + ',' + str(found) + '\n')
+                    elif command == 'find_up_navigation':
+                        count += 1
+                        self.log.info("%i Running grep on %s", count, apk_dir)
+                        up_navigation = self.find_up_navigation(
+                            package_name, version_code, apk_dir)
+                        result_file.write(
+                            package_name + ',' + version_code + ',' + str(up_navigation) + '\n')
 
                 except IndexError:
                     self.log.error(
@@ -153,6 +186,7 @@ class GrepTools(object):
         The following commands are available:
         find_fragment
         find_webview
+        find_up_navigation
         '''
         # command line parser
         parser = OptionParser(usage=usage_info, version="%prog 1.0")
@@ -183,6 +217,8 @@ class GrepTools(object):
             command = 'find_fragment'
         elif args[0] == 'find_webview':
             command = 'find_webview'
+        elif args[0] == 'find_up_navigation':
+            command = 'find_up_navigation'
         else:
             sys.exit(args[0] + ". Error: unknown command.")
 
