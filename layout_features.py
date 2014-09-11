@@ -3,6 +3,8 @@ import sys
 import os
 import datetime
 import logging
+from lxml.etree import ParserError
+from lxml.etree import XMLSyntaxError
 from lxml import etree
 from xml.etree import ElementTree
 from xml.etree.ElementTree import QName
@@ -131,8 +133,8 @@ class LayoutFeatures(object):
             tree = etree.parse(xml_file)
             xpath_query = "//" + element_name + ""
             return tree.xpath(xpath_query)
-        except lxml.etree.parsererror:
-            self.log.error("Error in file: %s",xml_file)
+        except (ParserError, XMLSyntaxError) as e:
+            print("Error in file: %s",xml_file)
         return []
             
     
