@@ -3,6 +3,7 @@ import sys
 import os
 import datetime
 import logging
+from lxml import etree
 from xml.etree import ElementTree
 from xml.etree.ElementTree import QName
 from optparse import OptionParser
@@ -15,6 +16,9 @@ class LayoutFeatures(object):
     # The logger's level must be set to the "lowest" level.
     log.setLevel(logging.DEBUG)
     
+    def __init__(self):
+        self.element_name = None
+        
     def find_on_click(self, source_dir, target_dir):
         result_file_name = os.path.join(
             target_dir, "on_click.csv")
@@ -46,13 +50,16 @@ class LayoutFeatures(object):
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
-        
-    def find_image_button(self, source_dir, target_dir):
+    
+    def find_ui_element(self, source_dir, target_dir):
+        if self.element_name is None:
+            abort("Please specify the element name using the -e option.")
         result_file_name = os.path.join(
-            target_dir, "image_button.csv")
+            target_dir, self.element_name + ".csv")
         result_file = open(result_file_name, 'w')
-        header_info = 'Package Name,' + 'Version Code,' + \
-               "Number of ImageButton elements" + '\n'
+        header_info = 'package,' + 'version_code,' + \
+               "use_" + self.element_name + "_elements," + \
+               "count, files"'\n'
         result_file.write(header_info)
         count = 0
         # Iterate over the unpacked apk files in the source directory.
@@ -66,14 +73,22 @@ class LayoutFeatures(object):
                     package_name = os.path.basename(apk_dir).rsplit('-', 1)[0]
                     version_code = os.path.basename(apk_dir).rsplit('-', 1)[1]
                     count += 1
-                    self.log.info("%i - Checking the number of ImageButton elements for %s", count, apk_dir)
+                    self.log.info("%i - Checking the number of " + self.element_name + " elements for %s", count, apk_dir)
                     layout_files = ResourcesListing.get_all_layout_files(apk_dir)
-                    image_buttons_count = 0
+                    element_name_count = 0
+                    found = False
+                    layout_file_names = []
+                    layout_files_names_list = ""
                     for layout_file in layout_files:
-                        elements = self.find_xml_elements_by_name(layout_file, 'ImageButton')
-                        image_buttons_count += len(elements)
+                        elements = self.find_xml_elements_by_name(layout_file, self.element_name)
+                        element_name_count += len(elements)
+                        if len(elements) > 0:
+                            found = True
+                            dir_name = os.path.basename(os.path.dirname(layout_file))
+                            layout_file_names.append(dir_name + "/" + os.path.basename(layout_file))
+                            layout_files_names_list = '|'.join(map(str, layout_file_names))
                     result_file.write(
-                        package_name + ',' + version_code + ',' + str(image_buttons_count) + '\n')
+                        package_name + ',' + version_code + ',' + str(found) + ',' + str(element_name_count) + ',' + layout_files_names_list + '\n')
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
@@ -114,9 +129,9 @@ class LayoutFeatures(object):
     # Search for an element in an xml file.
     @staticmethod
     def find_xml_elements_by_name(xml_file, element_name):
-        tree = ElementTree.parse(xml_file)
-        root = tree.getroot()
-        return root.findall(element_name)
+        tree = etree.parse(xml_file)
+        xpath_query = "//" + element_name + ""
+        return tree.xpath(xpath_query)
     
     # Search for an attribute in an xml file.
     @staticmethod
@@ -134,7 +149,6 @@ class LayoutFeatures(object):
     
     @staticmethod
     def find_xml_elements_start_with_name(xml_file, start_name):
-        from lxml import etree
         tree = etree.parse(xml_file)
         xpath_query = "//*[starts-with(name(), '" + start_name + "')]"
         return tree.xpath(xpath_query)
@@ -142,8 +156,8 @@ class LayoutFeatures(object):
     def start_main(self, command, source_dir, target_dir):
         if command == 'on_click':
             self.find_on_click(source_dir, target_dir)
-        elif command == 'image_button':
-            self.find_image_button(source_dir, target_dir)
+        elif command == 'ui_element':
+            self.find_ui_element(source_dir, target_dir)
         elif command == 'custom_widgets':
             self.find_custom_widgets(source_dir, target_dir)
         else:
@@ -169,7 +183,7 @@ class LayoutFeatures(object):
         The following commands are available:
         
         on_click <directory_of_unpacked_apk_files>
-        image_button <directory_of_unpacked_apk_files>
+        ui_element <directory_of_unpacked_apk_files> -e element_name 
         custom_widgets <directory_of_unpacked_apk_files>
         '''
         description_paragraph = ("DESCRIPTION: Find features in layout files."
@@ -182,6 +196,8 @@ class LayoutFeatures(object):
         parser = OptionParser(
             usage=usage_info, description = description_paragraph,
             version="%prog 1.0")
+        parser.add_option('-e', '--element', dest="element",
+                          help='the name of the UI element.')
         parser.add_option("-l", "--log", dest="log_file",
                           help="write logs to FILE.", metavar="FILE")
         parser.add_option('-v', '--verbose', dest="verbose", default=0,
@@ -196,6 +212,8 @@ class LayoutFeatures(object):
             logging_file.setLevel(logging_level)
             logging_file.setFormatter(formatter)
             self.log.addHandler(logging_file)
+        if options.element:
+            self.element_name = options.element
         if options.verbose:
             levels = [logging.ERROR, logging.INFO, logging.DEBUG]
             logging_level = levels[min(len(levels) - 1, options.verbose)]
@@ -208,12 +226,12 @@ class LayoutFeatures(object):
         command = None
         if args[0] == 'on_click':
             command = 'on_click'
-        elif args[0] == 'image_button':
-            command = 'image_button'
+        elif args[0] == 'ui_element':
+            command = 'ui_element'
         elif args[0] == 'custom_widgets':
             command = 'custom_widgets'
         else:
-            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [on_click, image_button, custom_widgets]")
+            sys.exit(args[0] + ". Error: unknown command. Valid commands are: [on_click, ui_element, custom_widgets]")
         # Check target directory
         source_dir = None
         target_dir = None
