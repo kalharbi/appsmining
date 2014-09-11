@@ -27,6 +27,8 @@ class ResourcesListing(object):
     @staticmethod
     def get_all_layout_files(apk_root_path):
         apk_res_path = os.path.join(apk_root_path, 'res')
+        if not os.path.exists(apk_res_path):
+           return []
         layout_files = []
         for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
             if os.path.isdir(d) and os.path.basename(d).lower().startswith('layout'):
