@@ -8,6 +8,8 @@ class ResourcesListing(object):
     def get_source_directories(apk_root_path):
         smali_path = os.path.join(apk_root_path, 'smali')
         dir_list = []
+        if not os.path.exists(smali_path):
+            return []
         for d in [os.path.join(smali_path, f) for f in os.listdir(smali_path)]:
             if os.path.isdir(d) and os.path.basename(d) != 'android':
                 dir_list.append(d)
@@ -18,6 +20,8 @@ class ResourcesListing(object):
     def get_values_directories(apk_root_path):
         res_path = os.path.join(apk_root_path, 'res')
         dir_list = []
+        if not os.path.exists(res_path):
+            return []
         for d in [os.path.join(res_path, f) for f in os.listdir(res_path)]:
             if os.path.isdir(d) and os.path.basename(d).lower().startswith('values'):
                 dir_list.append(d)
@@ -42,6 +46,8 @@ class ResourcesListing(object):
     def get_default_layout_files(apk_root_path):
         apk_res_path = os.path.join(apk_root_path, 'res')
         layout_files = []
+        if not os.path.exists(apk_res_path):
+            return []
         for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
             if os.path.isdir(d) and os.path.basename(d) == 'layout':
                 for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
@@ -55,6 +61,8 @@ class ResourcesListing(object):
     def get_specific_layout_files(apk_root_path):
         apk_res_path = os.path.join(apk_root_path, 'res')
         layout_files = []
+        if not os.path.exists(apk_res_path):
+            return []
         for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
             if os.path.isdir(d) and os.path.basename(d).startswith('layout-'):
                 for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
