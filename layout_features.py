@@ -117,8 +117,6 @@ class LayoutFeatures(object):
                     custom_widgets_count = 0
                     for layout_file in layout_files:
                         elements = self.find_xml_elements_start_with_name(layout_file, package_name.split('.')[0])
-                        #for e in elements:
-                            #print(e.tag)
                         custom_widgets_count += len(elements)
                     result_file.write(
                         package_name + ',' + version_code + ',' + str(custom_widgets_count) + '\n')
@@ -129,9 +127,14 @@ class LayoutFeatures(object):
     # Search for an element in an xml file.
     @staticmethod
     def find_xml_elements_by_name(xml_file, element_name):
-        tree = etree.parse(xml_file)
-        xpath_query = "//" + element_name + ""
-        return tree.xpath(xpath_query)
+        try:
+            tree = etree.parse(xml_file)
+            xpath_query = "//" + element_name + ""
+            return tree.xpath(xpath_query)
+        except lxml.etree.parsererror:
+            self.log.error("Error in file: %s",xml_file)
+        return []
+            
     
     # Search for an attribute in an xml file.
     @staticmethod
