@@ -19,13 +19,22 @@ log.setLevel(logging.DEBUG) # The logger's level must be set to the "lowest" lev
 # pickled method defined at the top level of a module to be called by multiple processes.
 # Runs apktool and returns the directory of the unpacked apk file.
 def run_grep(apk_dir, search_word):
+    # check if the directory is for an unpacked apk. i.e, contains
+    # AndroidManifest.xml
+    manifest_file = os.path.abspath(
+        os.path.join(apk_dir, 'AndroidManifest.xml'))
+    if os.path.isdir(apk_dir) and os.path.isfile(manifest_file):
+        log.info('Finding %s in %s', search_word, apk_dir)
+    else:
+        log.error("AndroidManifest.xml file is missing. Not a valid unpacked apk dir: %s", apk_dir)
+        return ('NA', False)
     layout_files = ResourcesListing.get_all_layout_files(apk_dir)
     layout_dirs = []
     for layout_file in layout_files:
         layout_dirs.append(os.path.dirname(layout_file))
-    log.info("Running grep on " + apk_dir)
     found = False
     for layout_dir in layout_dirs:
+        log.info("Running grep on " + layout_dir)
         # Run grep -m 1 layout_dir
         # -m 1 means stop reading the file after 1 matching lines.
         # -l means only returns the file name.
@@ -52,17 +61,8 @@ class LayoutFeaturesGrep(object):
         pool = Pool(processes=self.processes)
         log.info('A pool of %i worker processes has been created', self.processes)
         count = 0
-        apk_dir_list = []
         # Iterate over the unpacked apk files in the source directory.
-        for apk_dir in [os.path.join(source_dir, f) for f in os.listdir(source_dir)]:
-            # check if the directory is for an unpacked apk. i.e, contains
-            # AndroidManifest.xml
-            manifest_file = os.path.abspath(
-                os.path.join(apk_dir, 'AndroidManifest.xml'))
-            if os.path.isdir(apk_dir) and os.path.isfile(manifest_file):
-                apk_dir_list.append(apk_dir)
-                count += 1
-                log.info("%i - Found apk dir in %s", count, apk_dir)
+        apk_dir_list = [os.path.join(source_dir, f) for f in os.listdir(source_dir)]
         if apk_dir_list > 0:
             # output file
             result_file_name = os.path.join(target_dir, 'find_' + search_word.replace("<","") + '.csv')
@@ -73,6 +73,8 @@ class LayoutFeaturesGrep(object):
             for r in results:
                 if r is not None:
                     (apk_dir, found) = r.get()
+                    if apk_dir == 'NA':
+                        continue
                     package_name = os.path.basename(apk_dir).rsplit('-', 1)[0]
                     version_code = os.path.basename(apk_dir).rsplit('-', 1)[1]
                     result_file.write(package_name + ',' + version_code + ',' + str(found) + '\n')
