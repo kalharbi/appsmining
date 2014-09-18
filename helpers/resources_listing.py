@@ -40,6 +40,20 @@ class ResourcesListing(object):
                     if layout_file.lower().endswith('.xml'):
                         layout_files.append(layout_file)
         return layout_files
+        
+    # Return all the widget layout files inside /res/xmlayout*
+    @staticmethod
+    def get_all_widget_layout_files(apk_root_path):
+        apk_res_path = os.path.join(apk_root_path, 'res')
+        if not os.path.exists(apk_res_path):
+           return []
+        layout_files = []
+        for d in [os.path.join(apk_res_path, f) for f in os.listdir(apk_res_path)]:
+            if os.path.isdir(d) and os.path.basename(d).lower().startswith('xml'):
+                for layout_file in [os.path.join(d, lf) for lf in os.listdir(d)]:
+                    if layout_file.lower().endswith('.xml'):
+                        layout_files.append(layout_file)
+        return layout_files
     
     # Return all the layout files inside /res/layout for normal screen size (default)
     @staticmethod

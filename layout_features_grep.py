@@ -48,6 +48,39 @@ def run_grep(apk_dir, search_word):
         if rc != 0:
             log.error('%s is not found in: %s. %s', search_word, apk_dir, err)
     return (apk_dir, found)
+    
+# pickled method defined at the top level of a module to be called by multiple processes.
+# Runs apktool and returns the directory of the unpacked apk file.
+def run_grep_on_widget(apk_dir, search_word):
+    # check if the directory is for an unpacked apk. i.e, contains
+    # AndroidManifest.xml
+    manifest_file = os.path.abspath(
+        os.path.join(apk_dir, 'AndroidManifest.xml'))
+    if os.path.isdir(apk_dir) and os.path.isfile(manifest_file):
+        log.info('Finding %s in %s', search_word, apk_dir)
+    else:
+        log.error("AndroidManifest.xml file is missing. Not a valid unpacked apk dir: %s", apk_dir)
+        return ('NA', False)
+    layout_files = ResourcesListing.get_all_widget_layout_files(apk_dir)
+    layout_dirs = []
+    for layout_file in layout_files:
+        layout_dirs.append(os.path.dirname(layout_file))
+    found = False
+    for layout_dir in layout_dirs:
+        log.info("Running grep on " + layout_dir)
+        # Run grep -m 1 layout_dir
+        # -m 1 means stop reading the file after 1 matching lines.
+        # -l means only returns the file name.
+        sub_process = Popen(['grep', '-lm 1', '-r', search_word, layout_dir], stdout=PIPE, stderr=PIPE)
+        out, err = sub_process.communicate()
+        rc = sub_process.returncode
+        if rc == 0 and out is not None:
+            log.info("Found %s in %s", search_word, apk_dir)
+            found = True
+            break
+        if rc != 0:
+            log.error('%s is not found in: %s. %s', search_word, apk_dir, err)
+    return (apk_dir, found)
         
 class LayoutFeaturesGrep(object):
     # Set the number of worker processes to the number of available CPUs.
@@ -55,6 +88,7 @@ class LayoutFeaturesGrep(object):
 
     def __init__(self):
         self.ordered = False
+        self.widget_search = False
     
     def start_main(self, search_word, source_dir, target_dir):
         search_word = search_word.replace("'","")
@@ -68,8 +102,12 @@ class LayoutFeaturesGrep(object):
             result_file_name = os.path.join(target_dir, 'find_' + search_word.replace("<","") + '.csv')
             result_file = open(result_file_name, 'w')
             result_file.write('package,version_code,' + search_word.replace("<","") + '\n')
+            results = None
             # Run grep on the each apk dir asynchronously.
-            results = [pool.apply_async(run_grep, (apk_dir, search_word)) for apk_dir in apk_dir_list]
+            if(self.widget_search):
+                results = [pool.apply_async(run_grep_on_widget, (apk_dir, search_word)) for apk_dir in apk_dir_list]
+            else:
+                results = [pool.apply_async(run_grep, (apk_dir, search_word)) for apk_dir in apk_dir_list]
             for r in results:
                 if r is not None:
                     (apk_dir, found) = r.get()
@@ -115,6 +153,8 @@ class LayoutFeaturesGrep(object):
                            "Default is the number of CPUs in the system.")
         parser.add_option("-l", "--log", dest="log_file",
                           help="write logs to FILE.", metavar="FILE")
+        parser.add_option("-w", "--widget-search", dest="widget", action='store_true',
+                          default=False, help="search in widget layout files.")
         parser.add_option('-v', '--verbose', dest="verbose", default=0,
                           action='count', help='Increase verbosity.')
         (options, args) = parser.parse_args()
@@ -138,7 +178,8 @@ class LayoutFeaturesGrep(object):
             # set the file logger level if it exists
             if logging_file:
                 logging_file.setLevel(logging_level)
-        print(args[0])
+        if options.widget:
+            self.widget_search = True
         if os.path.isdir(args[1]) and os.path.isdir(args[2]):
             self.start_main(args[0], args[1], args[2])
         else:
