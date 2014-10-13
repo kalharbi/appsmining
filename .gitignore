@@ -2,6 +2,13 @@
 __pycache__/
 *.py[cod]
 
+#iPython
+profile_default/
+.ipynb_checkpoints/
+# results
+results/
+*.csv
+*.html
 # Tool log Files
 *.log
 
