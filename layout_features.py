@@ -21,6 +21,7 @@ class LayoutFeatures(object):
     def __init__(self):
         self.element_name = None
         self.attribute_name = None
+        self.attribute_name_not_present = False
         
     def find_on_click(self, source_dir, target_dir):
         result_file_name = os.path.join(
@@ -68,7 +69,13 @@ class LayoutFeatures(object):
             header_info = 'package,' + 'version_code,' + \
                    "use_" + self.element_name + "_elements_with_" + self.attribute_name.strip() + \
                    ",count, files"'\n'
-        
+        if self.attribute_name_not_present:
+            result_file_name = os.path.join(
+                target_dir, "no_use_" + self.element_name.strip() + "_" + self.attribute_name.strip() + ".csv")
+            header_info = 'package,' + 'version_code,' + \
+                   "use_" + self.element_name + "_elements_without_" + self.attribute_name.strip() + \
+                   ",count, files"'\n'
+                   
         result_file = open(result_file_name, 'w')
         result_file.write(header_info)
         count = 0
@@ -90,7 +97,8 @@ class LayoutFeatures(object):
                     layout_file_names = []
                     layout_files_names_list = ""
                     for layout_file in layout_files:
-                        elements = self.find_xml_elements_by_name(layout_file, self.element_name, self.attribute_name)
+                        elements = self.find_xml_elements_by_name(layout_file, self.element_name, 
+                                                                  self.attribute_name, self.attribute_name_not_present)
                         element_name_count += len(elements)
                         if len(elements) > 0:
                             found = True
@@ -136,12 +144,14 @@ class LayoutFeatures(object):
                         
     # Search for an element in an xml file.
     @staticmethod
-    def find_xml_elements_by_name(xml_file, element_name, attribute_name):
+    def find_xml_elements_by_name(xml_file, element_name, attribute_name, exclude_attribute = False):
         try:
             tree = etree.parse(xml_file)
             xpath_query = "//" + element_name + ""
             if attribute_name is not None:
                 xpath_query = "//" + element_name + "[@" + attribute_name + "]"
+            if exclude_attribute:
+                xpath_query = "//" + element_name + "[not(@" + attribute_name + ")]"
             return tree.xpath(xpath_query, 
                               namespaces={'android': "http://schemas.android.com/apk/res/android"})
         except (ParserError, XMLSyntaxError) as e:
@@ -216,13 +226,17 @@ class LayoutFeatures(object):
             version="%prog 1.0")
         parser.add_option('-e', '--element', dest="element",
                           help='the name of the UI element.')
+        parser.add_option('-x', '--exclude-attribute', action="store_true",
+                          default=False, dest="attribute_name_not_present",
+                          help='Exclude the attribute name from the search. For example, ' +
+                          'find elements where the given attribute name (-a attribute_name) is not present.')
         parser.add_option('-a', '--attribute', dest="attribute",
                           help='the name of the UI element and attribute.')
         parser.add_option("-l", "--log", dest="log_file",
                           help="write logs to FILE.", metavar="FILE")
         parser.add_option('-v', '--verbose', dest="verbose", default=0,
                           action='count', help='increase verbosity.')
-
+        
         (options, args) = parser.parse_args()
         if len(args) != 3:
             parser.error("incorrect number of arguments.")
@@ -239,6 +253,8 @@ class LayoutFeatures(object):
         if options.verbose:
             levels = [logging.ERROR, logging.INFO, logging.DEBUG]
             logging_level = levels[min(len(levels) - 1, options.verbose)]
+        if options.attribute_name_not_present:
+            self.attribute_name_not_present = True
 
             # set the file logger level if it exists
             if logging_file:
