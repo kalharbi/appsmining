@@ -20,6 +20,7 @@ class LayoutFeatures(object):
     
     def __init__(self):
         self.element_name = None
+        self.attribute_name = None
         
     def find_on_click(self, source_dir, target_dir):
         result_file_name = os.path.join(
@@ -58,10 +59,17 @@ class LayoutFeatures(object):
             abort("Please specify the element name using the -e option.")
         result_file_name = os.path.join(
             target_dir, self.element_name + ".csv")
-        result_file = open(result_file_name, 'w')
         header_info = 'package,' + 'version_code,' + \
                "use_" + self.element_name + "_elements," + \
                "count, files"'\n'
+        if self.attribute_name is not None:
+            result_file_name = os.path.join(
+                target_dir, "use_" + self.element_name.strip() + "_" + self.attribute_name.strip() + ".csv")
+            header_info = 'package,' + 'version_code,' + \
+                   "use_" + self.element_name + "_elements_with_" + self.attribute_name.strip() + \
+                   ",count, files"'\n'
+        
+        result_file = open(result_file_name, 'w')
         result_file.write(header_info)
         count = 0
         # Iterate over the unpacked apk files in the source directory.
@@ -82,7 +90,7 @@ class LayoutFeatures(object):
                     layout_file_names = []
                     layout_files_names_list = ""
                     for layout_file in layout_files:
-                        elements = self.find_xml_elements_by_name(layout_file, self.element_name)
+                        elements = self.find_xml_elements_by_name(layout_file, self.element_name, self.attribute_name)
                         element_name_count += len(elements)
                         if len(elements) > 0:
                             found = True
@@ -128,20 +136,21 @@ class LayoutFeatures(object):
                         
     # Search for an element in an xml file.
     @staticmethod
-    def find_xml_elements_by_name(xml_file, element_name):
+    def find_xml_elements_by_name(xml_file, element_name, attribute_name):
         try:
             tree = etree.parse(xml_file)
             xpath_query = "//" + element_name + ""
-            return tree.xpath(xpath_query)
+            if attribute_name is not None:
+                xpath_query = "//" + element_name + "[@" + attribute_name + "]"
+            return tree.xpath(xpath_query, 
+                              namespaces={'android': "http://schemas.android.com/apk/res/android"})
         except (ParserError, XMLSyntaxError) as e:
             print("Error in file: %s",xml_file)
         return []
-            
     
     # Search for an attribute in an xml file.
     @staticmethod
     def find_xml_elements_by_attribute(xml_file, attribute_name):
-        
         # Returns elements that contain this attribute
         elements_list = []
         tree = ElementTree.parse(xml_file)
@@ -192,7 +201,7 @@ class LayoutFeatures(object):
         The following commands are available:
         
         on_click <directory_of_unpacked_apk_files>
-        ui_element <directory_of_unpacked_apk_files> -e element_name 
+        ui_element <directory_of_unpacked_apk_files> -e element_name -a attribute_name
         custom_widgets <directory_of_unpacked_apk_files>
         '''
         description_paragraph = ("DESCRIPTION: Find features in layout files."
@@ -207,6 +216,8 @@ class LayoutFeatures(object):
             version="%prog 1.0")
         parser.add_option('-e', '--element', dest="element",
                           help='the name of the UI element.')
+        parser.add_option('-a', '--attribute', dest="attribute",
+                          help='the name of the UI element and attribute.')
         parser.add_option("-l", "--log", dest="log_file",
                           help="write logs to FILE.", metavar="FILE")
         parser.add_option('-v', '--verbose', dest="verbose", default=0,
@@ -223,6 +234,8 @@ class LayoutFeatures(object):
             self.log.addHandler(logging_file)
         if options.element:
             self.element_name = options.element
+        if options.attribute:
+            self.attribute_name = options.attribute
         if options.verbose:
             levels = [logging.ERROR, logging.INFO, logging.DEBUG]
             logging_level = levels[min(len(levels) - 1, options.verbose)]
@@ -239,6 +252,8 @@ class LayoutFeatures(object):
             command = 'ui_element'
         elif args[0] == 'custom_widgets':
             command = 'custom_widgets'
+        elif args[0] == 'ui_element_attribute':
+            command = 'ui_element_attribute'
         else:
             sys.exit(args[0] + ". Error: unknown command. Valid commands are: [on_click, ui_element, custom_widgets]")
         # Check target directory
