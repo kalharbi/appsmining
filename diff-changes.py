@@ -41,6 +41,10 @@ def get_unique_diff(dataframe, count_column_name, result_column_name):
     df_result.set_index(first_index, inplace =True)
     for gp in dataframe.index.get_level_values(first_index).unique():
         tmp_df = dataframe.loc[gp, count_column_name]
+        # Only apps that have multiple versions.
+        if len(tmp_df) < 2:
+            print("Skipping " + gp + " because it has only " + str(len(tmp_df)) + " versions.")
+            continue
         d = 0
         if len(tmp_df) == 1:
             d = 0
@@ -49,6 +53,9 @@ def get_unique_diff(dataframe, count_column_name, result_column_name):
             d =  l[-1] - l[0]
         df_result.ix[gp, result_column_name] = d
         df_result.ix[gp, 'number_of_versions'] = len(tmp_df)
+        vers = tmp_df.index.get_level_values('version_code')
+        vers_str = ', '.join(str(x) for x in vers)
+        df_result.ix[gp, 'versions_list'] = vers_str 
     return df_result
 
 def get_list_diff(dataframe, list_column_name):
@@ -60,25 +67,52 @@ def get_list_diff(dataframe, list_column_name):
     print('|==================================================================|')
     # Get the first index name (package name)
     first_index = dataframe.index.names[0]
-    df_result = pd.DataFrame(columns=[first_index, 'number_of_versions', 'added', 'dropped'])
-    df_result.set_index(first_index, inplace =True)
-    for gp in dataframe.index.get_level_values(first_index).unique():
-        tmp_df = dataframe.loc[gp, list_column_name]
-        added_list = ''
-        dropped_list = ''
-        # If the app has multiple versions.
-        if len(tmp_df) > 1:
-            first_list = tmp_df.tolist()[0]
-            last_list = tmp_df.tolist()[-1]
-            if type(first_list) is float and np.isnan(first_list):
-                first_list = ''
-            if type(last_list) is float and np.isnan(last_list):
-                last_list = ''
-            added_list = list(set(last_list.split(','))-set(first_list.split(',')))
-            dropped_list = list(set(first_list.split(','))-set(last_list.split(',')))
-        df_result.ix[gp, 'number_of_versions'] = len(tmp_df)
-        df_result.ix[gp, 'added'] = '|'.join(added_list)
-        df_result.ix[gp, 'dropped'] = '|'.join(dropped_list)
+    second_index = dataframe.index.names[1]
+    df_result = pd.DataFrame(columns=['package', 'previous_version_code', 'new_version_code', 'added', 'dropped'])
+    df_result.set_index(keys=['package'], inplace = True)
+    # get all packages
+    packages = dataframe.index.get_level_values(first_index).unique()
+    i = 0
+    for package in packages:
+        # for each package, get all versions
+        version_codes_list = dataframe.ix[package].index.tolist()
+        version_codes_list.sort()
+        # Skip apps with one version
+        if len(version_codes_list) < 2:
+            continue
+        for current_idx, version_code in enumerate(version_codes_list):
+            next_idx = current_idx + 1
+            if next_idx == len(version_codes_list):
+                break
+            previous_version_code = version_codes_list[current_idx]
+            new_version_code = version_codes_list[next_idx]
+            print('Comparing ' + package + ' version ' + str(previous_version_code) +
+                  ' with version ' + str(new_version_code))
+            previous_features = dataframe.loc[package, previous_version_code][list_column_name]
+            if type(previous_features) is not str:
+                previous_features = ''
+            new_features = dataframe.loc[package, new_version_code][list_column_name]
+            if type(new_features) is not str:
+                new_features = ''
+            added_features = set(new_features.split(',')) - set(previous_features.split(','))
+            dropped_features = set(previous_features.split(',')) - set(new_features.split(','))
+            if added_features is None or len(added_features) == 0:
+                added_features = ''
+            else:
+                added_features = list(added_features)
+            if dropped_features is None or len(dropped_features) == 0:
+                dropped_features = ''
+            else:
+                dropped_features = list(dropped_features)
+            row_dict = {'package': [package],
+                        'previous_version_code': [str(previous_version_code)],
+                        'new_version_code': [str(new_version_code)],
+                        'added' :  ','.join(added_features),
+                        'dropped' : ','.join(dropped_features)
+                        }
+            
+            df_result = df_result.append(pd.DataFrame(row_dict))
+            
     return df_result
     
 def run_command(command, in_file, column_name, out_file):
@@ -95,7 +129,8 @@ def run_command(command, in_file, column_name, out_file):
         df_changes.to_csv(out_file)
     elif command == 'list_diff':
         df_changes = get_list_diff(df_details, column_name)
-        df_changes.to_csv(out_file)
+        df_changes.set_index(keys= ['package'], inplace = True)
+        df_changes.to_csv(out_file, dtype = int)
 
 
 def main(args):
@@ -162,6 +197,7 @@ def main(args):
     else:
         sys.exit("Error: out file " + args[3] + " cannot be created.")
     run_command(command, in_file, args[2], out_file)
+    print("The result is saved at " + out_file)
     print("======================================================")
     print("Finished after " + str(datetime.datetime.now() - start_time))
     print("======================================================")
