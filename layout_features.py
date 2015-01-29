@@ -62,19 +62,19 @@ class LayoutFeatures(object):
             target_dir, self.element_name + ".csv")
         header_info = 'package,' + 'version_code,' + \
                "use_" + self.element_name + "_elements," + \
-               "count, files"'\n'
+               "count,files"'\n'
         if self.attribute_name is not None:
             result_file_name = os.path.join(
                 target_dir, "use_" + self.element_name.strip() + "_" + self.attribute_name.strip() + ".csv")
             header_info = 'package,' + 'version_code,' + \
-                   "use_" + self.element_name + "_elements_with_" + self.attribute_name.strip() + \
-                   ",count, files"'\n'
+                   "use_" + self.element_name + "_elements_with_" + self.attribute_name.replace(":","_").strip() + \
+                   ",count,files"'\n'
         if self.attribute_name_not_present:
             result_file_name = os.path.join(
                 target_dir, "no_use_" + self.element_name.strip() + "_" + self.attribute_name.strip() + ".csv")
             header_info = 'package,' + 'version_code,' + \
-                   "use_" + self.element_name + "_elements_without_" + self.attribute_name.strip() + \
-                   ",count, files"'\n'
+                   "use_" + self.element_name + "_elements_without_" + self.attribute_name.replace(':',"_").strip() + \
+                   ",count,files"'\n'
                    
         result_file = open(result_file_name, 'w')
         result_file.write(header_info)
