@@ -147,6 +147,8 @@ class LayoutFeatures(object):
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
+                except UnicodeEncodeError:
+                    self.log.error('Encoding error in %s-%s', package_name, version_code)
                         
     # Search for an element in an xml file.
     @staticmethod
