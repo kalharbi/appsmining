@@ -115,8 +115,8 @@ class LayoutFeatures(object):
         result_file_name = os.path.join(
             target_dir, "custom_widgets.csv")
         result_file = open(result_file_name, 'w')
-        header_info = 'Package Name,' + 'Version Code,' + \
-               "Number of custom widgets" + '\n'
+        header_info = 'package,' + 'version_code,' + \
+               "totalCustomWidgets, allCustomWidgets" + '\n'
         result_file.write(header_info)
         count = 0
         # Iterate over the unpacked apk files in the source directory.
@@ -133,11 +133,17 @@ class LayoutFeatures(object):
                     self.log.info("%i - Checking the number of custom widget elements for %s", count, apk_dir)
                     layout_files = ResourcesListing.get_all_layout_files(apk_dir)
                     custom_widgets_count = 0
+                    custom_widgets = set()
                     for layout_file in layout_files:
-                        elements = self.find_xml_elements_start_with_name(layout_file, package_name.split('.')[0])
+                        elements = self.find_custom_xml_elements(layout_file)
+                        for e in elements:
+                            e_base = '.'.join(e.tag.split('.')[:3])
+                            custom_widgets.add(e_base)
                         custom_widgets_count += len(elements)
                     result_file.write(
-                        package_name + ',' + version_code + ',' + str(custom_widgets_count) + '\n')
+                        package_name + ',' + version_code + ',' + str(custom_widgets_count) + \
+                        ',"' + ','.join(custom_widgets) + '"' +  '\n')
+                    custom_widgets = None
                 except IndexError:
                     self.log.error(
                         'Directory must be named using the following scheme: packagename-versioncode')
@@ -176,6 +182,16 @@ class LayoutFeatures(object):
         try:
             tree = etree.parse(xml_file)
             xpath_query = "//*[starts-with(name(), '" + start_name + "')]"
+            return tree.xpath(xpath_query)
+        except (ParserError, XMLSyntaxError) as e:
+            print("Error in file: %s",xml_file)
+        return []
+    
+    @staticmethod
+    def find_custom_xml_elements(xml_file):
+        try:
+            tree = etree.parse(xml_file)
+            xpath_query = "//*[contains(name(), '.')]"
             return tree.xpath(xpath_query)
         except (ParserError, XMLSyntaxError) as e:
             print("Error in file: %s",xml_file)
